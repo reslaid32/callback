@@ -57,8 +57,8 @@ extern "C"
     char *description; /* reason description */
   };
 
-  static struct callback_reason g_reasons[CB_MAX_REASONS];
-  static size_t g_reasons_count = 0;
+  extern struct callback_reason g_reasons[CB_MAX_REASONS];
+  extern size_t g_reasons_count;
 
 /* forward type-allias */
 #define callback_ctx callback_context
@@ -76,8 +76,8 @@ extern "C"
     callback_fn fn;
   };
 
-  static struct callback g_callbacks[CB_MAX_CALLBACKS];
-  static size_t g_callbacks_count = 0;
+  extern struct callback g_callbacks[CB_MAX_CALLBACKS];
+  extern size_t g_callbacks_count;
 
 /* callback type api */
 #define callback_make_type_def(Type) callback_make_type (#Type, sizeof (Type))
@@ -117,14 +117,19 @@ extern "C"
   bool callback_registered (struct callback callback);
   index_t callback_register (struct callback callback);
   void callback_reason (index_t idx);
-  struct callback *callback_force_get (index_t id);
+  struct callback *callback_get_unsafe (index_t id);
   struct callback *callback_get (index_t id);
   struct callback *callback_get_name (char *name);
   struct callback *callback_get_ptr (callback_fn fn);
   bool callback_invoke (struct callback *cb, struct callback_ctx ctx);
   bool callback_invoke_id (index_t id, struct callback_ctx ctx);
   bool callback_invoke_name (char *name, struct callback_ctx ctx);
-
+  /* Invoke by a function pointer; the function may be unregistered. */
+  bool callback_invoke_ptr (callback_fn fn, struct callback_ctx ctx);
+  /* Works like callback_invoke_name(char *, struct callback_ctx):
+   * searches for an ID by function pointer and then calls
+   * callback_invoke_id(index_t, struct callback_ctx) with the found ID. */
+  bool callback_invoke_ptr_reg (callback_fn fn, struct callback_ctx ctx);
 #ifdef __cplusplus
 }
 #endif

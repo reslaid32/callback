@@ -1,5 +1,11 @@
 #include "callback.h"
 
+struct callback_reason g_reasons[CB_MAX_REASONS];
+size_t g_reasons_count = 0;
+
+struct callback g_callbacks[CB_MAX_CALLBACKS];
+size_t g_callbacks_count = 0;
+
 /* callback type api */
 struct callback_type
 callback_make_type (char *_type_name, size_t _type_size)
@@ -180,7 +186,7 @@ callback_reason (index_t idx)
 }
 
 struct callback *
-callback_force_get (index_t id)
+callback_get_unsafe (index_t id)
 {
   return &(g_callbacks[id]);
 }
@@ -190,14 +196,14 @@ callback_get (index_t id)
 {
   if (!callback_id_registered (id))
     return NULL;
-  return callback_force_get (id);
+  return callback_get_unsafe (id);
 }
 
 struct callback *
 callback_get_name (char *name)
 {
   for (size_t i = 0; i < g_callbacks_count; ++i)
-    if (strcmp (g_callbacks[i].name, name))
+    if (strcmp (g_callbacks[i].name, name) == 0)
       return callback_get (i);
   return NULL;
 }
@@ -209,6 +215,15 @@ callback_get_ptr (callback_fn fn)
     if (g_callbacks[i].fn == fn)
       return callback_get (i);
   return NULL;
+}
+
+bool
+callback_invoke_ptr (callback_fn fn, struct callback_ctx ctx)
+{
+  if (!fn)
+    return false;
+  fn (ctx);
+  return true;
 }
 
 bool
@@ -226,15 +241,34 @@ callback_invoke_id (index_t id, struct callback_ctx ctx)
   if (!callback_id_registered (id))
     return false;
 
-  struct callback *cb = callback_force_get (id);
+  struct callback *cb = callback_get_unsafe (id);
   return callback_invoke (cb, ctx);
 }
 
 bool
 callback_invoke_name (char *name, struct callback_ctx ctx)
 {
+#if 1
   for (size_t i = 0; i < g_callbacks_count; ++i)
     if (g_callbacks[i].name == name)
+      return callback_invoke_id (i, ctx);
+  return false;
+#else
+  if (!name)
+    return false;
+  struct callback *cb = callback_get_name (name);
+  if (!cb)
+    return false;
+  callback_invoke (cb, ctx);
+  return true;
+#endif
+}
+
+bool
+callback_invoke_ptr_reg (callback_fn fn, struct callback_ctx ctx)
+{
+  for (size_t i = 0; i < g_callbacks_count; ++i)
+    if (g_callbacks[i].fn == fn)
       return callback_invoke_id (i, ctx);
   return false;
 }
